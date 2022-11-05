@@ -1,6 +1,8 @@
+import Header from "./header";
+
 export default function Login(){
     return(<>
-    
+    <Header></Header>
     <div className="p-20 h-screen w-screen flex flex-col-reverse md:flex-row items-center justify-center bg-gray-200">
   <div className="content text-3xl text-center md:text-left">
     <h1 className="text-5xl text-blue-500 font-bold">Facebook</h1>

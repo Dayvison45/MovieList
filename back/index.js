@@ -6,10 +6,19 @@ const bcrypt = require("bcrypt")
 require('dotenv').config()
 const app = express()
 app.use(cors())
-
+app.use(express.json())
 const userModel = require("./models/userModel")
+const { default: axios } = require("axios")
 const linkDB = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.3v8vfkh.mongodb.net/MovieList?retryWrites=true&w=majority`
 mongoose.connect(linkDB).then(console.log("database connect")).catch(err=>console.log(err))
+
+
+//
+const tmdblinkmovie =`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US` 
+const tmdblinktv = `https://api.themoviedb.org/3/discover/tv?api_key=${process.env.API_KEY}&language=en-US`
+
+
+
 
 // midleware
 async function checktoken (req,res,next){
@@ -60,11 +69,25 @@ async function checktoken (req,res,next){
 })
 
 app.get('/movies', async(req,res)=>{
-
+  const movies = []
+  await axios.get(`https://api.themoviedb.org/3/movie/popular?api_key=${process.env.API_KEY}&page=1`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+  await axios.get(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US&with_genres=28`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+  await axios.get(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US&with_genres=12`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+  await axios.get(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US&with_genres=16`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+  
+  
+  res.status(200).json(movies)
 })
 
 app.get('/series', async(req,res)=>{
-
+  const movies = []
+  await axios.get(`https://api.themoviedb.org/3/tv/popular?api_key=${process.env.API_KEY}&page=1`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+  await axios.get(`https://api.themoviedb.org/3/discover/tv?api_key=${process.env.API_KEY}&language=en-US&with_genres=10759`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+  await axios.get(`https://api.themoviedb.org/3/discover/tv?api_key=${process.env.API_KEY}&language=en-US&with_genres=16`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+  await axios.get(`https://api.themoviedb.org/3/discover/tv?api_key=${process.env.API_KEY}&language=en-US&with_genres=35`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+  
+  
+  res.status(200).json(movies)
 })
 
 
@@ -72,9 +95,13 @@ app.get('/series', async(req,res)=>{
 
 
 app.get("/", async(req,res)=>{
-res.send("hello world")
-const user = await userModel.find()
-console.log(user)
+const movies = []
+await axios.get(`https://api.themoviedb.org/3/movie/popular?api_key=${process.env.API_KEY}&language=en-US`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+await axios.get(`https://api.themoviedb.org/3/tv/popular?api_key=${process.env.API_KEY}&language=en-US`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+await axios.get(`https://api.themoviedb.org/3/movie/top_rated?api_key=${process.env.API_KEY}&language=en-US&page=1`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
+
+
+res.status(200).json(movies)
 })
 
 app.listen(3000,console.log('server on'))

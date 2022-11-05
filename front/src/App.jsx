@@ -6,6 +6,7 @@ import Series from './series';
 import Login from './login';
 import Subscribe from './subscribe';
 import List from './list';
+import Profile from "./profile";
 
 
 function App() {
@@ -15,12 +16,13 @@ function App() {
    <BrowserRouter>
    <Routes>
    <Route path="/"  element={<Home />} />
-   <Route path="movies" element={<Movies />} />
+   <Route path="/movies" element={<Movies />} />
    <Route path="/series" element={<Series />} />
    <Route path="/list" element={<List />} />
    <Route path="/login" element={<Login />} />
    <Route path="/subscribe" element={<Subscribe />} />
-   </Routes>
+   <Route path="/profile" element={<Profile />} />
+      </Routes>
    </BrowserRouter>
   )
 }

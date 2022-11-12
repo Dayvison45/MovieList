@@ -47,6 +47,29 @@ async function checktoken (req,res,next){
   }catch(err){
   console.log(err)}
 })
+
+app.post("/subscribe", async(req,res)=>{
+  const {name,password} = await req.body
+
+  if(!name){
+      res.status(422).json({msg:"Coloque um nome válido"})}
+  if(!password){
+      res.status(422).json({msg:"Coloque uma senha válido"})}
+  //criar usuario e senha
+  const salt = await  bcrypt.genSalt(12)
+  const passwordHash = await bcrypt.hash(password,salt)
+  const userexist = await userModel.findOne({name:name})
+  if(userexist){
+    res.status(401).json({msg:"user ja existente"})
+  }else{const user = await new userModel({ name:name,password:passwordHash});
+  user.save()
+  res.status(200).json({msg:"usuario criado com sucesso"})
+  }
+
+
+
+})
+
   app.post('/log',checktoken, async(req,res)=>{
   const {id} = req.body
    const user = await userModel.findOne({_id:id})

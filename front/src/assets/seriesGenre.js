@@ -1,5 +1,4 @@
-const genre ={
-    "genres": [
+const genre = [
       {
         "id": 10759,
         "name": "Action & Adventure"
@@ -65,4 +64,4 @@ const genre ={
         "name": "Western"
       }
     ]
-  }
+  

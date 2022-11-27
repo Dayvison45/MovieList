@@ -5,6 +5,9 @@ const mongoose = require("mongoose")
 const bcrypt = require("bcrypt")
 require('dotenv').config()
 const app = express()
+const secret = process.env.DB_SECRET
+
+
 app.use(cors())
 app.use(express.json())
 const userModel = require("./models/userModel")
@@ -23,11 +26,9 @@ const tmdblinktv = `https://api.themoviedb.org/3/discover/tv?api_key=${process.e
 // midleware
 async function checktoken (req,res,next){
     const authHeader = await req.headers['authorization']
-   
     const token = authHeader && authHeader.split(' ')[1]
     if(!token){
-      return res.status(401).json({msg:"acesso negado"+token})
-    }
+      return res.status(401).json({msg:"acesso negado"+token})}
     try{
   jwt.verify(token,secret)
   next()}
@@ -35,18 +36,19 @@ async function checktoken (req,res,next){
 
   //login
   app.post("/login", async(req,res)=>{
-    const {id} = req.body
-   const user = await userModel.findOne({_id:id})
-   try{const token= jwt.sign({
+    const {name,password} = req.body
+   const user = await userModel.findOne({name:name})
+   if(user){try{const token= jwt.sign({
     id:user._id
       },secret,{expiresIn:600000})
   user.updateOne({token:token})
   let  newuser = user
   newuser.password = null
+
   res.status(200).json({newuser,token})
   }catch(err){
-  console.log(err)}
-})
+  console.log(err)}}else{
+    res.status(401).json({msg:"dados errados"}) }})
 
 app.post("/subscribe", async(req,res)=>{
   const {name,password} = await req.body
@@ -63,33 +65,73 @@ app.post("/subscribe", async(req,res)=>{
     res.status(401).json({msg:"user ja existente"})
   }else{const user = await new userModel({ name:name,password:passwordHash});
   user.save()
-  res.status(200).json({msg:"usuario criado com sucesso"})
-  }
-
-
-
-})
+  res.status(200).json({msg:"usuario criado com sucesso"})}})
 
   app.post('/log',checktoken, async(req,res)=>{
   const {id} = req.body
    const user = await userModel.findOne({_id:id})
    try{const token= jwt.sign({
-    id:user._id
-      },secret,{expiresIn:600000})
+    id:user._id },secret,{expiresIn:600000})
   user.updateOne({token:token})
   let  newuser = user
   newuser.password = null
   res.status(200).json({newuser,token})
   }catch(err){
-  console.log(err)}
+res.status(401).json(err)}
   })
 
-  app.post('/addlist', async(req,res)=>{
+  app.post('/addlist',  checktoken, async(req,res)=>{
+ const {list,id} = req.body
+ const newuser = await userModel.findOne({_id:id})
+ let mapear=false
+ newuser.list.map((e)=>e.id===list.id?mapear=true:"")
+ mapear===false?addMovie(list):removeMovie(list)
+ async function removeMovie(x){
+    const newlist= newuser.list.filter(e=> e!==x)
+    newuser.list = newlist
+    newuser.save().then(res.status(200).json({msg:"item removido da sua lista"}))
+  console.log('item removido')}
 
+ async function addMovie(x){
+   newuser.list.push(x)
+    newuser.save().then(res.status(200).json({msg:'item adicionado a sua lista'}))
+    console.log('item adicionado')
+ }
 })
-  app.get('/list', async(req,res)=>{
 
+app.post("/search",async(req,res)=>{
+  const {data,genre,type} = req.body
+  console.log(data)
+  const respo = []
+console.log(genre)
+if(genre){
+  await axios.get(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US&with_genres=${genre}`).then(response=>response.data.results[0]?respo.push(response.data.results):'').catch(err=>console.log(err)) 
+  res.status(200).json(respo)
+
+}
+if(data){
+  await axios.get(`https://api.themoviedb.org/3/search/movie?api_key=${process.env.API_KEY}&language=en-US&query=${data.replaceAll(" ","+")}`).then(response=>respo.push(response.data.results)).catch(err=>console.log(err))
+  res.status(200).json(respo)
+}
+
+  // await axios.get(`https://api.themoviedb.org/3/search/tv?api_key=39113d47500d6a832e88e500d36006ec&language=en-US&query=Mr Robot`)
+  // await axios.get(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US&query=${data.replaceAll(" ","+")}&without_genres=${genre}`).then(response=>response.data.results[0]?respo.push(response.data.results):'').catch(err=>console.log(err))
+  // await axios.get(`https://api.themoviedb.org/3/discover/tv?api_key=${process.env.API_KEY}&language=en-US&query=${data.replaceAll(" ","+")}&without_genres=${genre}`).then(response=>response.data.results[0]?respo.push(response.data.results):'').catch(err=>console.log(err))
 })
+
+ app.post('/list',checktoken ,async(req,res)=>{
+  const {id} = req.body
+   const user = await userModel.findOne({_id:id})
+   const data = user.list
+ 
+  const respo = []
+  //const data = [{name:"The Godfather",type:"movie"},{name:"Mr robot",type:"tv"}]   
+  data.map(async(e)=> await axios.get(`https://api.themoviedb.org/3/search/${e.release_date?"movie":"tv"}?api_key=${process.env.API_KEY}&query=${e.name?e.name.replaceAll(" ","+"):e.title.replaceAll(" ","+")}`).then(response=>respo.push(response.data.results[0])).catch(err=>console.log("nome errado")) )
+  setTimeout(resposta,2000)
+  function resposta(){
+    res.status(200).json(respo)
+  }
+  })
 
 app.get('/movies', async(req,res)=>{
   const movies = []
@@ -97,10 +139,7 @@ app.get('/movies', async(req,res)=>{
   await axios.get(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US&with_genres=28`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
   await axios.get(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US&with_genres=12`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
   await axios.get(`https://api.themoviedb.org/3/discover/movie?api_key=${process.env.API_KEY}&language=en-US&with_genres=16`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
-  
-  
-  res.status(200).json(movies)
-})
+   res.status(200).json(movies)})
 
 app.get('/series', async(req,res)=>{
   const movies = []
@@ -108,23 +147,13 @@ app.get('/series', async(req,res)=>{
   await axios.get(`https://api.themoviedb.org/3/discover/tv?api_key=${process.env.API_KEY}&language=en-US&with_genres=10759`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
   await axios.get(`https://api.themoviedb.org/3/discover/tv?api_key=${process.env.API_KEY}&language=en-US&with_genres=16`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
   await axios.get(`https://api.themoviedb.org/3/discover/tv?api_key=${process.env.API_KEY}&language=en-US&with_genres=35`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
-  
-  
-  res.status(200).json(movies)
-})
-
-
-
-
+  res.status(200).json(movies)})
 
 app.get("/", async(req,res)=>{
 const movies = []
 await axios.get(`https://api.themoviedb.org/3/movie/popular?api_key=${process.env.API_KEY}&language=en-US`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
 await axios.get(`https://api.themoviedb.org/3/tv/popular?api_key=${process.env.API_KEY}&language=en-US`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
 await axios.get(`https://api.themoviedb.org/3/movie/top_rated?api_key=${process.env.API_KEY}&language=en-US&page=1`).then(response=>movies.push(response.data)).catch(err=>console.log(err))
-
-
-res.status(200).json(movies)
-})
+res.status(200).json(movies)})
 
 app.listen(3000,console.log('server on'))

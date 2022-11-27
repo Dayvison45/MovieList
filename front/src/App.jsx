@@ -7,15 +7,19 @@ import Login from './login';
 import Subscribe from './subscribe';
 import List from './list';
 import Profile from "./profile";
+import UserContextProvider from "./UserContext";
+import Search from './search';
+
 
 
 function App() {
   
 
   return (
-   <BrowserRouter>
+    <UserContextProvider><BrowserRouter>
    <Routes>
    <Route path="/"  element={<Home />} />
+   <Route path="/search"  element={<Search />} />
    <Route path="/movies" element={<Movies />} />
    <Route path="/series" element={<Series />} />
    <Route path="/list" element={<List />} />
@@ -23,7 +27,8 @@ function App() {
    <Route path="/subscribe" element={<Subscribe />} />
    <Route path="/profile" element={<Profile />} />
       </Routes>
-   </BrowserRouter>
+   </BrowserRouter></UserContextProvider>
+   
   )
 }
 
